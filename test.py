@@ -1,55 +1,41 @@
 import os
-from crewai import Agent, Task, Crew
-from langchain.llms import OpenAI
 from dotenv import load_dotenv
+from crewai import Crew, Agent, Task, LLM
+import litellm
 
+# Load API key from .env
 load_dotenv()
-gemini_api_key = os.getenv("GEMINI_API")
+GEMINI_API_KEY = os.getenv("GEMINI_API")
 
-# Initialize the AI model
-class GeminiLLM(LLM):
-    """Custom LLM wrapper for Google Gemini API."""
+if not GEMINI_API_KEY:
+    raise ValueError("❌ Missing GEMINI_API in .env file")
 
-    @property
-    def _llm_type(self) -> str:
-        return "gemini"
+# Set environment variable for LiteLLM
+os.environ["GEMINI_API_KEY"] = GEMINI_API_KEY
 
-    def _call(self, prompt: str, stop: Optional[List[str]] = None) -> str:
-        """Make a request to Gemini API and return the response."""
-        url = f"https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key={gemini_api_key}"
-        headers = {"Content-Type": "application/json"}
-        data = {"contents": [{"parts": [{"text": prompt}]}]}
+# Define the LLM with the correct provider
+llm = LLM(model="gemini/gemini-1.5-flash")  # provider="gemini" is optional
 
-        response = requests.post(url, headers=headers, json=data)
-
-        if response.status_code == 200:
-            return response.json()["candidates"][0]["content"]["parts"][0]["text"]
-        else:
-            return f"Error: {response.status_code}, {response.text}"
-        
-# Initialize Gemini LLM
-gemini_llm = GeminiLLM()
-
-
-# Define the Agent
+# Define an AI agent
 researcher = Agent(
-    name="AI Researcher",
-    role="Researcher",
-    goal="Find and summarize AI advancements",
-    backstory="An expert AI researcher keeping up with recent developments.",
+    role="AI Researcher",
+    goal="Summarize AI advancements",
+    backstory="Expert in AI and ML research",
     llm=llm
 )
 
 # Define the Task
 research_task = Task(
     description="Summarize the latest AI advancements in a short paragraph.",
-    agent=researcher
+    agent=researcher,
+    expected_output="A concise paragraph summarizing AI advancements."
 )
 
-# Create the Crew
+# Create and run the Crew
 crew = Crew(agents=[researcher], tasks=[research_task])
 
-# Run the Agent
-if __name__ == "__main__":
+try:
     result = crew.kickoff()
-    print("AI Research Summary:\n", result)
+    print("\n🔹 AI Response:\n", result)
+except Exception as e:
+    print(f"\n❌ Error: {e}")
