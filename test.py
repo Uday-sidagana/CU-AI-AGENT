@@ -16,6 +16,7 @@ llm = LLM(model="gemini/gemini-1.5-flash")  # provider="gemini" is optional
 
 #student details
 details ={'name':'Uday', 'number': '9550578004', 'Xth_Marks': 95}
+form_url = 'https://forms.gle/767P3TpZkXktSDM7A'
 
 # Define an AI agent
 researcher = Agent(
@@ -23,6 +24,12 @@ researcher = Agent(
     goal="Summarize AI advancements",
     backstory="Expert in AI and ML research",
     llm=llm
+)
+student_data= Agent(
+    role="G",
+    goal="To fill the google form with student data",
+    backstory="Expert in using Selenium and can fill Google forms",
+    llm= llm
 )
 
 form_filler = Agent(
@@ -35,9 +42,9 @@ form_filler = Agent(
 
 # Define the Task
 research_task = Task(
-    description="Summarize the latest AI advancements in a short paragraph.",
-    agent=researcher,
-    expected_output="A concise paragraph summarizing AI advancements."
+    description=f"Use selenium to fill the google form{form_url} using the {details} and submit the form",
+    agent=student_data,
+    
 )
 
 # Create and run the Crew
