@@ -6,9 +6,11 @@ import litellm
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
+service = Service('./chromedriver')
 driver = webdriver.Chrome()
 
 
@@ -57,7 +59,7 @@ def extract_field_name(form_url):
     
     labels = driver.find_elements(By.TAG_NAME, 'label')
     return labels
-field_names= extract_field_name()
+field_names= extract_field_name(form_url)
 
 # #Form field extraction
 # form_field_extractor = Agent(
@@ -78,24 +80,23 @@ field_names= extract_field_name()
 
 #Field match    
 field_matcher = Agent(
-    role="Google Form Filler",
-    goal=f"Run through the list of labels from the list{extract_field_name()}",
-    backstory="Expert in using Selenium and can fill Google forms",
-    tools=[selenium_tool],
+    role="Field Chooser",
+    goal=f"To choose appropriate value for the given field, you can also give creative answer if required",
+    backstory="You are an expert in choosing Correct information for a specific field",
     llm= llm
 
 )
 
-form_field_extract_task = Task(
-    description="Extract each field name using the tools and pass the labels list to the field_matcher agent",
-    agent=form_field_extractor,
-    expected_output="The list of labels extracted from the form"
-
+field_matcher_task = Task(
+    description=f"Run through the list of labels from the list{field_names} and choose appropriate values from {details} for each label",
+    agent=field_matcher,
+    expected_output="A List with choosen values from the details in an ordered manner"
+)
 # Define the Task
 
 
 # Create and run the Crew
-crew = Crew(agents=[form_filler], tasks=[research_task])
+crew = Crew(agents=[field_matcher], tasks=[field_matcher_task])
 
 try:
     result = crew.kickoff()
