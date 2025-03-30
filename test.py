@@ -19,18 +19,19 @@ details ={'name':'Uday', 'number': '9550578004', 'Xth_Marks': 95}
 form_url = 'https://forms.gle/767P3TpZkXktSDM7A'
 
 # Define an AI agent
-researcher = Agent(
-    role="AI Researcher",
-    goal="Summarize AI advancements",
-    backstory="Expert in AI and ML research",
-    llm=llm
-)
-student_data= Agent(
-    role="Google Form Filler",
-    goal="To fill the google form with student data",
-    backstory="Expert in using Selenium and can fill Google forms",
-    llm= llm
-)
+# researcher = Agent(
+#     role="AI Researcher",
+#     goal="Summarize AI advancements",
+#     backstory="Expert in AI and ML research",
+#     llm=llm
+# )
+
+# student_data= Agent(
+#     role="Google Form Filler",
+#     goal="To fill the google form with student data",
+#     backstory="Expert in using Selenium and can fill Google forms",
+#     llm= llm
+# )
 
 form_filler = Agent(
     role="Google Form Filler",
@@ -43,12 +44,12 @@ form_filler = Agent(
 # Define the Task
 research_task = Task(
     description=f"Use selenium to fill the google form{form_url} using the {details} and submit the form",
-    agent=student_data,
+    agent=form_filler,
     
 )
 
 # Create and run the Crew
-crew = Crew(agents=[student_data], tasks=[research_task])
+crew = Crew(agents=[form_filler], tasks=[research_task])
 
 try:
     result = crew.kickoff()
