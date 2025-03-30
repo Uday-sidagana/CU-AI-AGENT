@@ -1,10 +1,21 @@
 import os
 from dotenv import load_dotenv
 from crewai import Crew, Agent, Task, LLM
+from crewai_tools import tools
 import litellm
+
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+
+driver = webdriver.Chrome()
+
+
+
 #Tools
-from crewai_tools import SeleniumScrapingTool
-selenium_tool = SeleniumScrapingTool()
+# from crewai_tools import SeleniumScrapingTool
+# selenium_tool = SeleniumScrapingTool()
 
 
 # Load API key from .env
@@ -40,7 +51,31 @@ form_url = 'https://forms.gle/767P3TpZkXktSDM7A'
 #     llm= llm
 # )
 
-form_filler = Agent(
+def extract_field_name(form_url):
+    driver.get(form_url)
+    WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.TAG_NAME, "form")))
+    
+    labels = driver.find_elements(By.TAG_NAME, 'label')
+    return labels
+
+#Form field extraction
+form_field_extractor = Agent(
+    role="Google Form Filler",
+    goal="Extract each field name using the tools and pass the labels list to the field_matcher agent",
+    backstory="Expert in using Selenium and extracting the field names",
+    tools=[extract_field_name],
+    llm= llm
+
+)
+
+form_field_extract_task = Task(
+    description="Extract each field name using the tools and pass the labels list to the field_matcher agent",
+    agent=form_field_extractor,
+    expected_output="The list of labels extracted from the form"
+    
+)
+
+field_matcher = Agent(
     role="Google Form Filler",
     goal="To fill the google form with student data",
     backstory="Expert in using Selenium and can fill Google forms",
@@ -50,12 +85,7 @@ form_filler = Agent(
 )
 
 # Define the Task
-research_task = Task(
-    description=f"Use selenium_tool to fill the google form{form_url} using the {details} and submit the form",
-    agent=form_filler,
-    expected_output='Form Submitted successfully'
-    
-)
+
 
 # Create and run the Crew
 crew = Crew(agents=[form_filler], tasks=[research_task])
