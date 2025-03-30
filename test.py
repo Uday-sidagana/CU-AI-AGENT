@@ -57,13 +57,31 @@ def extract_field_name(form_url):
     
     labels = driver.find_elements(By.TAG_NAME, 'label')
     return labels
+field_names= extract_field_name()
 
-#Form field extraction
-form_field_extractor = Agent(
+# #Form field extraction
+# form_field_extractor = Agent(
+#     role="Google Form Filler",
+#     goal="Extract each field name using the tools and pass the labels list to the field_matcher agent",
+#     backstory="Expert in using Selenium and extracting the field names",
+#     tools=[extract_field_name],
+#     llm= llm
+
+# )
+
+# form_field_extract_task = Task(
+#     description="Extract each field name using the tools and pass the labels list to the field_matcher agent",
+#     agent=form_field_extractor,
+#     expected_output="The list of labels extracted from the form"
+#)
+
+
+#Field match    
+field_matcher = Agent(
     role="Google Form Filler",
-    goal="Extract each field name using the tools and pass the labels list to the field_matcher agent",
-    backstory="Expert in using Selenium and extracting the field names",
-    tools=[extract_field_name],
+    goal=f"Run through the list of labels from the list{extract_field_name()}",
+    backstory="Expert in using Selenium and can fill Google forms",
+    tools=[selenium_tool],
     llm= llm
 
 )
@@ -72,17 +90,6 @@ form_field_extract_task = Task(
     description="Extract each field name using the tools and pass the labels list to the field_matcher agent",
     agent=form_field_extractor,
     expected_output="The list of labels extracted from the form"
-    
-)
-
-field_matcher = Agent(
-    role="Google Form Filler",
-    goal="To fill the google form with student data",
-    backstory="Expert in using Selenium and can fill Google forms",
-    tools=[selenium_tool],
-    llm= llm
-
-)
 
 # Define the Task
 
