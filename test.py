@@ -26,7 +26,7 @@ researcher = Agent(
     llm=llm
 )
 student_data= Agent(
-    role="G",
+    role="Google Form Filler",
     goal="To fill the google form with student data",
     backstory="Expert in using Selenium and can fill Google forms",
     llm= llm
