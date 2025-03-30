@@ -48,7 +48,7 @@ research_task = Task(
 )
 
 # Create and run the Crew
-crew = Crew(agents=[researcher], tasks=[research_task])
+crew = Crew(agents=[student_data], tasks=[research_task])
 
 try:
     result = crew.kickoff()
