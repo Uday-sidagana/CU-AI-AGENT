@@ -13,17 +13,13 @@ from selenium.webdriver.support import expected_conditions as EC
 service = Service('./chromedriver')
 driver = webdriver.Chrome()
 
-
-
-#Tools
+# Tools
 # from crewai_tools import SeleniumScrapingTool
 # selenium_tool = SeleniumScrapingTool()
-
 
 # Load API key from .env
 load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API")
-
 
 # Set environment variable for LiteLLM
 os.environ["GEMINI_API_KEY"] = GEMINI_API_KEY
@@ -31,69 +27,52 @@ os.environ["GEMINI_API_KEY"] = GEMINI_API_KEY
 # Define the LLM with the correct provider
 llm = LLM(model="gemini/gemini-1.5-flash")  # provider="gemini" is optional
 
-#student details
-details ={'name':'Uday', 'number': '9550578004', 'Xth_Marks': 95}
-form_url = 'https://forms.gle/767P3TpZkXktSDM7A'
+# Student details
+details = {
+    'name': 'Uday', 'number': '9550578004', '10th_Marks': 95, '12th_Marks': 93,
+    'Graduation Percentage': 73, 'place': 'Visakhapatnam', 'Backlogs': 0,
+    'email': 'uday.sidgana@gmail.com', 'umail': '21bcs7418@cuchd.in'
+}
+form_url = 'https://forms.gle/L9wcUADe5cCgSUFY6'
 
-
-
-
-# Define an AI agent
-# researcher = Agent(
-#     role="AI Researcher",
-#     goal="Summarize AI advancements",
-#     backstory="Expert in AI and ML research",
-#     llm=llm
-# )
-
-# student_data= Agent(
-#     role="Google Form Filler",
-#     goal="To fill the google form with student data",
-#     backstory="Expert in using Selenium and can fill Google forms",
-#     llm= llm
-# )
 
 def extract_field_name(form_url):
     driver.get(form_url)
     WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.TAG_NAME, "form")))
-    
-    labels = driver.find_elements(By.TAG_NAME, 'label')
-    return labels
-field_names= extract_field_name(form_url)
 
-# #Form field extraction
-# form_field_extractor = Agent(
-#     role="Google Form Filler",
-#     goal="Extract each field name using the tools and pass the labels list to the field_matcher agent",
-#     backstory="Expert in using Selenium and extracting the field names",
-#     tools=[extract_field_name],
-#     llm= llm
+    # XPath to extract span elements where the label is stored inside div
+    labels = driver.find_elements(By.XPATH, "//div[contains(@jsmodel, 'CP1oW')]//span[text()]")
 
-# )
+    # Extract text from the labels
+    field_names = [label.text for label in labels if label.text.strip() != ""]
 
-# form_field_extract_task = Task(
-#     description="Extract each field name using the tools and pass the labels list to the field_matcher agent",
-#     agent=form_field_extractor,
-#     expected_output="The list of labels extracted from the form"
-#)
+    print(f"Number of labels found: {len(field_names)}")
+    return field_names
 
 
-#Field match    
+field_names = extract_field_name(form_url)
+
+# Print the extracted field names
+print("Extracted Field Names:", field_names)
+
+
+# Field match    
 field_matcher = Agent(
     role="Field Chooser",
-    goal=f"To choose appropriate value for the given field, you can also give creative answer if required",
-    backstory="You are an expert in choosing Correct information for a specific field",
-    llm= llm
-
+    goal=f"Go through {field_names} and for each field name choose one most relevant choice from the {details}, if the field name doesn't match any value from {details} answer it based on your own knowledge",
+    backstory=f"""
+       You are an expert in matching {field_names} with {details}, You can understand what each item in {field_names} is and match it with {details}.
+        """,
+    llm=llm
 )
 
 field_matcher_task = Task(
-    description=f"Run through the list of labels from the list{field_names} and choose appropriate values from {details} for each label",
+    description=f"Go through {field_names} and for each field name choose one most relevant value from the keys of this dictionary {details}",
     agent=field_matcher,
-    expected_output="A List with choosen values from the details in an ordered manner"
+    expected_output="A List of chosen values for each field"
 )
-# Define the Task
 
+# Define the Task
 
 # Create and run the Crew
 crew = Crew(agents=[field_matcher], tasks=[field_matcher_task])
@@ -103,3 +82,41 @@ try:
     print("\n🔹 AI Response:\n", result)
 except Exception as e:
     print(f"\n❌ Error: {e}")
+
+# Fill form with data
+def fill_form_with_data(field_names, data):
+    for idx, field_name in enumerate(field_names):
+        if idx >= len(data):  # In case the data list is shorter than field names
+            break
+
+        value = data[idx]
+
+        # Find the input field using the label name (it may vary depending on the form structure)
+        # This assumes the input field is adjacent to the label or within the same div
+        try:
+            input_field = driver.find_element(By.XPATH, f"//span[text()='{field_name}']/ancestor::div[contains(@class,'geS5n')]//input")
+
+            if input_field:
+                input_field.send_keys(str(value))
+                print(f"Filled field '{field_name}' with value '{value}'")
+        except Exception as e:
+            print(f"Error filling field '{field_name}': {e}")
+
+# Assuming the AI response is returned in the same order as the form fields
+# Here we're mapping field names to the details dictionary (simulated result list for now)
+result_list = [
+    details['name'], details['number'], details['10th_Marks'],
+    details['12th_Marks'], details['Graduation Percentage'],
+    details['place'], details['Backlogs'], details['email'], details['umail']
+]
+
+# Call the function to fill the form
+fill_form_with_data(field_names, result_list)
+
+# Submit the form
+try:
+    submit_button = driver.find_element(By.XPATH, "//div[@role='button' and @aria-label='Submit']")
+    submit_button.click()
+    print("Form submitted successfully.")
+except Exception as e:
+    print(f"Error submitting the form: {e}")
